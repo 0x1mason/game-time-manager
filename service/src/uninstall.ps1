@@ -19,16 +19,16 @@ if (!
 
 Remove-Item "$Env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\GameTimeManager.lnk"
 
-# get Firefox process
-$proc = Get-Process GameTimeManager-manager -ErrorAction SilentlyContinue
+# get process
+$proc = Get-Process GameTimeManager -ErrorAction SilentlyContinue
 if ($proc) {
-    Stop-Process -Name GameTimeManager-manager
+    Stop-Process -Name GameTimeManager
 
     # should have loop with timeout full sleep
     Start-Sleep 3
     
     if (!$proc.HasExited) {
-        $firefox | Stop-Process -Force -Name GameTimeManager-manager
+        Stop-Process -Force -Name GameTimeManager
     }
 }
 
