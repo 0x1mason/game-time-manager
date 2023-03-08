@@ -23,6 +23,7 @@ $Shortcut.Save()
 
 $streams = Get-Item -Force -Stream * "$PSScriptRoot\GameTimeManager.exe" | Select-Object Stream
 foreach ($s in $streams) {
+    # remove "Mark of the Web" to prevent security warning on start
     if ($s.Stream -eq "Zone.Identifier") {
         Remove-Item -Force -Stream Zone.Identifier "$PSScriptRoot\GameTimeManager.exe"
         Write-Output "Removed zone identifier"
@@ -30,7 +31,8 @@ foreach ($s in $streams) {
     }
 }
 
-Invoke-WmiMethod -Class Win32_Process -Name Create -ArgumentList "$PSScriptRoot\GameTimeManager.exe"
+# use explorer.exe to start application with non-elevated permissions
+explorer.exe "$PSScriptRoot\GameTimeManager.exe"
 
 Write-Output "Successfully installed and started Game Time Monitor."
 
