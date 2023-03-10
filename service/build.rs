@@ -28,5 +28,5 @@ fn main() {
     )
     .expect("Could not copy");
 
-    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=./src");
 }
