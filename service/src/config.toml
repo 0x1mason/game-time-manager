@@ -1,22 +1,18 @@
 [overlay]
 # An integer indicating the percentage offset of the overlay's x axis, with 0 being the left of the screen
-x_offset = 100
+x_offset = 95
 # An integer indicating the percentage offset of the overlay's y axis, with 0 being the top of the screen
-y_offset = 0
-# Size of font
-font_size = 100
-# How long to show data (seconds)
-show_duration = 10
-# The display pattern to use during a notification. Positive and negative integers can be used to created
-# a flashing pattern where positive indicates how many seconds to stay visible, while negative indicates
-# how long to hide. Use a single positive value to display without flashing.
-show_pattern = [1, -1, 1, -1, 7]
+y_offset = 10
+# The display pattern to use during a notification. Positive and negative integers can be used to create
+# a flashing pattern where positive indicates how many seconds to stay visible and negative indicates how
+# long to hide. Use a single positive value to display without flashing.
+show_pattern = [1, -1, 1, -1, 8]
 
 [watcher]
 # How often to check system processes for likely games (seconds)
-poll_frequency = 1
+poll_frequency = 5
 # How often to notify the overlay to show data (seconds)
-notification_frequency = 20
+notification_frequency = 300
 # Executable names to ignore; case-sensitive, supports regular expressions (wrap with 3 single quotes)
 ignore = [
     "explorer.exe",

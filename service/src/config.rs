@@ -12,8 +12,6 @@ pub struct Config {
 pub struct OverlayConfig {
     pub x_offset: u32,
     pub y_offset: u32,
-    pub font_size: u32,
-    pub show_duration: u64,
     pub show_pattern: Vec<i32>,
 }
 

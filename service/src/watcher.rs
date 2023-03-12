@@ -27,8 +27,7 @@ struct Game {
 }
 
 impl Game {
-    fn new(name: String) -> Self {
-        let friendly_name = name.clone();
+    fn new(name: String, friendly_name: String) -> Self {
         Self {
             name: name,
             friendly_name: friendly_name,
@@ -65,7 +64,7 @@ pub fn watch(sysprovider: &dyn SystemProvider, sender: Sender<String>) {
             }
             Err(_) => continue,
         }
-        println!("yirk");
+
         let game_exe_name = game_proc.name();
         let game_pid = game_proc.pid().as_u32();
 
@@ -75,9 +74,15 @@ pub fn watch(sysprovider: &dyn SystemProvider, sender: Sender<String>) {
             continue;
         }
 
-        let game = games
-            .entry(game_exe_name.to_string())
-            .or_insert_with(|| Game::new(game_exe_name.to_string()));
+        let game = games.entry(game_exe_name.to_string()).or_insert_with(|| {
+            let friendly_name =
+                match sysprovider.try_get_product_name(game_proc.exe().display().to_string()) {
+                    Ok(name) => name,
+                    Err(_) => "".to_string(),
+                };
+
+            return Game::new(game_exe_name.to_string(), friendly_name);
+        });
 
         // if there's no session for this pid, create one, then update the session info
         let last_session = game.sessions.last_mut();
@@ -91,7 +96,7 @@ pub fn watch(sysprovider: &dyn SystemProvider, sender: Sender<String>) {
             // set last shown to now so that the overlay isn't displayed until the next notification window
             last_shown = Some(Instant::now());
         }
-        println!("yo");
+
         if last_shown.is_some()
             && last_shown.unwrap().elapsed()
                 < Duration::from_secs(cfg.watcher.notification_frequency)
@@ -99,12 +104,6 @@ pub fn watch(sysprovider: &dyn SystemProvider, sender: Sender<String>) {
             continue;
         }
 
-        game.friendly_name =
-            match sysprovider.try_get_product_name(game_proc.exe().display().to_string()) {
-                Ok(name) => name,
-                Err(_) => "".to_string(),
-            };
-        println!("{}", game.friendly_name);
         let session = game.sessions.last_mut().unwrap();
         session.run_time = game_proc.run_time();
 
