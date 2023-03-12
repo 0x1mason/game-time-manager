@@ -33,6 +33,6 @@ foreach ($s in $streams) {
 # use explorer.exe to start application with non-elevated permissions
 explorer.exe "$PSScriptRoot\GameTimeManager.exe"
 
-Write-Output "Successfully installed and started Game Time Monitor."
+Write-Output "Successfully installed and started Game Time Manager."
 
 Pause

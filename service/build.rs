@@ -10,23 +10,20 @@ fn main() {
 
     let proj_root = std::env::var("CARGO_MANIFEST_DIR").unwrap();
 
-    copy_to_output(
-        &format!("{}/src/config.toml", proj_root),
-        &env::var("PROFILE").unwrap(),
-    )
-    .expect("Could not copy");
+    let incl_files = [
+        "src/config.toml",
+        "src/install.ps1",
+        "src/uninstall.ps1",
+        "src/fonts",
+    ];
 
-    copy_to_output(
-        &format!("{}/src/install.ps1", proj_root),
-        &env::var("PROFILE").unwrap(),
-    )
-    .expect("Could not copy");
-
-    copy_to_output(
-        &format!("{}/src/uninstall.ps1", proj_root),
-        &env::var("PROFILE").unwrap(),
-    )
-    .expect("Could not copy");
+    for file in incl_files.iter() {
+        copy_to_output(
+            &format!("{}/{}", proj_root, file),
+            &env::var("PROFILE").unwrap(),
+        )
+        .expect(&format!("Could not copy {}", file));
+    }
 
     println!("cargo:rerun-if-changed=./src");
 }

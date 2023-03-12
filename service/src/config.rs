@@ -10,13 +10,11 @@ pub struct Config {
 
 #[derive(Deserialize, Default, Clone)]
 pub struct OverlayConfig {
-    pub width: u32,
-    pub height: u32,
-    pub font: String,
+    pub x_offset: u32,
+    pub y_offset: u32,
     pub font_size: u32,
-    pub font_rgb: Vec<u8>,
-    pub background_rgb: Vec<u8>,
     pub show_duration: u64,
+    pub show_pattern: Vec<i32>,
 }
 
 #[derive(Deserialize, Default, Clone)]

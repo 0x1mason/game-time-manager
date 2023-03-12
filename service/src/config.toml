@@ -1,21 +1,23 @@
 [overlay]
-width = 400
-height = 200
-font = "Arial"
+# An integer indicating the percentage offset of the overlay's x axis, with 0 being the left of the screen
+x_offset = 100
+# An integer indicating the percentage offset of the overlay's y axis, with 0 being the top of the screen
+y_offset = 0
+# Size of font
 font_size = 100
-# red, green, blue values between 0 and 255
-font_rgb = [255, 255, 255]
-# red, green, blue values between 0 and 255
-background_rgb = [255, 0, 0]
-# how long to show data (seconds)
+# How long to show data (seconds)
 show_duration = 10
+# The display pattern to use during a notification. Positive and negative integers can be used to created
+# a flashing pattern where positive indicates how many seconds to stay visible, while negative indicates
+# how long to hide. Use a single positive value to display without flashing.
+show_pattern = [1, -1, 1, -1, 7]
 
 [watcher]
-# how often to check system processes for likely games (seconds)
-poll_frequency = 5
-# how often to notify the overlay to show data (seconds)
-notification_frequency = 300
-# executable names to ignore; case-sensitive, supports regular expressions (wrap with 3 single quotes)
+# How often to check system processes for likely games (seconds)
+poll_frequency = 1
+# How often to notify the overlay to show data (seconds)
+notification_frequency = 20
+# Executable names to ignore; case-sensitive, supports regular expressions (wrap with 3 single quotes)
 ignore = [
     "explorer.exe",
     "TrainerRoad.exe",

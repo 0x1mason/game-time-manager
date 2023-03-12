@@ -65,7 +65,7 @@ pub fn watch(sysprovider: &dyn SystemProvider, sender: Sender<String>) {
             }
             Err(_) => continue,
         }
-
+        println!("yirk");
         let game_exe_name = game_proc.name();
         let game_pid = game_proc.pid().as_u32();
 
@@ -91,7 +91,7 @@ pub fn watch(sysprovider: &dyn SystemProvider, sender: Sender<String>) {
             // set last shown to now so that the overlay isn't displayed until the next notification window
             last_shown = Some(Instant::now());
         }
-
+        println!("yo");
         if last_shown.is_some()
             && last_shown.unwrap().elapsed()
                 < Duration::from_secs(cfg.watcher.notification_frequency)
@@ -104,7 +104,7 @@ pub fn watch(sysprovider: &dyn SystemProvider, sender: Sender<String>) {
                 Ok(name) => name,
                 Err(_) => "".to_string(),
             };
-
+        println!("{}", game.friendly_name);
         let session = game.sessions.last_mut().unwrap();
         session.run_time = game_proc.run_time();
 

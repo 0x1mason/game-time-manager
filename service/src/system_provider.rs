@@ -61,6 +61,7 @@ impl SystemProvider for Win32Provider {
             let hwnd = GetForegroundWindow();
 
             if !is_fullscreen(hwnd) {
+                println!("not full screen");
                 return Err(ERR_NO_GAME_FOUND.to_string());
             }
 
