@@ -1,10 +1,10 @@
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
-use std::thread;
-use std::{sync::mpsc, time::Duration};
-
+use crossbeam::channel::{Receiver, Sender};
 use nwd::NwgUi;
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 use windows::Win32::{
     Graphics::Gdi::{GetMonitorInfoA, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTOPRIMARY},
     UI::WindowsAndMessaging::GetForegroundWindow,
@@ -15,7 +15,7 @@ use winapi::um::winuser::{SetLayeredWindowAttributes, LWA_COLORKEY};
 
 use crate::{config, system_provider, watcher};
 
-#[derive(Default, NwgUi)]
+#[derive(NwgUi, Default)]
 pub struct Overlay {
     #[nwg_control(size: (400, 120), position: (400, 0), flags: "POPUP", ex_flags: winapi::um::winuser::WS_EX_TOPMOST|winapi::um::winuser::WS_EX_LAYERED)]
     #[nwg_events( OnInit: [Overlay::on_init], OnWindowClose: [Overlay::close] )]
@@ -36,16 +36,20 @@ pub struct Overlay {
     notice: nwg::Notice,
 
     text: Arc<Mutex<String>>,
+    pub close_sender: Option<Sender<()>>,
+    pub closer: Option<Receiver<()>>,
 }
 
 impl Overlay {
     fn on_init(&self) {
         let notice = self.notice.sender();
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = crossbeam::channel::unbounded();
+        let closer = self.closer.clone();
 
         thread::spawn(|| {
             let sysprovider = &system_provider::Win32Provider::new();
-            watcher::watch(sysprovider, sender);
+            let w = watcher::Watcher::new();
+            w.watch(sysprovider, sender, closer.unwrap());
         });
 
         let display_text = self.text.clone();
@@ -62,20 +66,20 @@ impl Overlay {
 
                 for p in cfg.overlay.show_pattern.iter() {
                     let delay: i32 = *p;
-                    let sleep = delay.abs() as u64;
 
                     if delay > 0 {
                         *display_text.lock().unwrap() = rcv.clone();
                     } else {
-                        *display_text.lock().unwrap() = "".to_string();
+                        *display_text.lock().unwrap() = String::from("");
                     }
 
                     notice.notice();
 
+                    let sleep = delay.abs() as u64;
                     thread::sleep(Duration::from_secs(sleep));
                 }
 
-                *display_text.lock().unwrap() = "".to_string();
+                *display_text.lock().unwrap() = String::from("");
                 notice.notice();
             }
         });
@@ -119,6 +123,10 @@ impl Overlay {
     }
 
     fn close(&self) {
+        if self.close_sender.is_some() {
+            let cs = self.close_sender.clone();
+            cs.unwrap().send(()).expect("Close message should succeed");
+        }
         nwg::stop_thread_dispatch()
     }
 }

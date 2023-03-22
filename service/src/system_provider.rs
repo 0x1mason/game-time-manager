@@ -1,3 +1,5 @@
+#[cfg(test)]
+use mockall::{automock, mock, predicate::*};
 use sysinfo::{Pid, PidExt};
 use windows::{
     core::{HSTRING, PCWSTR},
@@ -21,6 +23,7 @@ use windows::{
 const ERR_NO_GAME_FOUND: &str = "ErrNoGameFound";
 static INIT_COM: std::sync::Once = std::sync::Once::new();
 
+#[cfg_attr(test, automock)]
 pub trait SystemProvider {
     fn try_get_game_pid(&self) -> Result<Pid, String>;
     fn try_get_product_name(&self, exe_name: String) -> Result<String, String>;
@@ -111,3 +114,18 @@ fn is_fullscreen(hwnd: HWND) -> bool {
 
     return rect == minfo.rcMonitor;
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+
+//     #[test]
+//     fn watch() {
+//         let mut mock = MockSystemProvider::new();
+//         // mock.expect
+//         assert_eq!(2 + 2, 4);
+//     }
+// }
+#[cfg(test)]
+#[path = "./system_provider_test.rs"]
+mod system_provider_test;

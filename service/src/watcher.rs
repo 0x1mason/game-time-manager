@@ -1,6 +1,7 @@
 use crate::config;
 use crate::system_provider::SystemProvider;
 use regex::RegexSet;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use std::{collections::HashMap, sync::mpsc::Sender};
@@ -40,82 +41,114 @@ impl Game {
     }
 }
 
-pub fn watch(sysprovider: &dyn SystemProvider, sender: Sender<String>) {
-    let mut games: HashMap<String, Game> = HashMap::new();
-    let mut last_shown: Option<Instant> = Default::default();
-    let mut system = System::new_all();
+pub struct Watcher {
+    games: Mutex<HashMap<String, Game>>,
+}
 
-    loop {
-        let cfg = config::load().unwrap();
+use crossbeam::channel::{after, select};
 
-        thread::sleep(Duration::from_secs(cfg.watcher.poll_frequency));
+impl Watcher {
+    pub fn new() -> Self {
+        Self {
+            games: Mutex::new(HashMap::new()),
+        }
+    }
 
-        let game_proc;
+    pub fn watch(
+        &self,
+        sysprovider: &dyn SystemProvider,
+        sender: crossbeam::channel::Sender<String>,
+        closer: crossbeam::channel::Receiver<()>,
+    ) {
+        let mut last_shown: Option<Instant> = Default::default();
+        let mut system = System::new_all();
 
-        match sysprovider.try_get_game_pid() {
-            Ok(pid) => {
-                system.refresh_processes();
+        loop {
+            let cfg = config::load().unwrap();
 
-                if system.process(pid).is_none() || std::process::id() == pid.as_u32() {
-                    continue;
-                }
+            let tick = after(Duration::from_secs(cfg.watcher.poll_frequency));
 
-                game_proc = system.process(pid).unwrap();
+            select! {
+                recv(tick) -> _ => (),
+                recv(closer) -> _ => break,
             }
-            Err(_) => continue,
-        }
 
-        let game_exe_name = game_proc.name();
-        let game_pid = game_proc.pid().as_u32();
+            let game_proc;
 
-        // TODO use wildcard checking, not regexp
-        let set = RegexSet::new(cfg.watcher.ignore).unwrap();
-        if set.matches(game_proc.name()).matched_any() {
-            continue;
-        }
+            match sysprovider.try_get_game_pid() {
+                Ok(pid) => {
+                    system.refresh_processes();
 
-        let game = games.entry(game_exe_name.to_string()).or_insert_with(|| {
-            let friendly_name =
-                match sysprovider.try_get_product_name(game_proc.exe().display().to_string()) {
-                    Ok(name) => name,
-                    Err(_) => "".to_string(),
-                };
+                    if system.process(pid).is_none() || std::process::id() == pid.as_u32() {
+                        continue;
+                    }
 
-            return Game::new(game_exe_name.to_string(), friendly_name);
-        });
+                    game_proc = system.process(pid).unwrap();
+                }
+                Err(_) => continue,
+            }
 
-        // if there's no session for this pid, create one, then update the session info
-        let last_session = game.sessions.last_mut();
-        if last_session.is_none() || last_session.unwrap().pid != game_pid {
-            game.sessions.push(Session {
-                pid: game_pid,
-                focus_spans: vec![FocusSpan(Some(Instant::now()), None)],
-                run_time: 0,
-            });
+            let game_exe_name = game_proc.name();
+            let game_pid = game_proc.pid().as_u32();
 
-            // set last shown to now so that the overlay isn't displayed until the next notification window
-            last_shown = Some(Instant::now());
-        }
+            // TODO use wildcard checking, not regexp
+            let set = RegexSet::new(cfg.watcher.ignore).unwrap();
+            if set.matches(game_proc.name()).matched_any() {
+                continue;
+            }
 
-        if last_shown.is_some()
-            && last_shown.unwrap().elapsed()
-                < Duration::from_secs(cfg.watcher.notification_frequency)
-        {
-            continue;
-        }
+            let mut game_map = self.games.lock().unwrap();
 
-        let session = game.sessions.last_mut().unwrap();
-        session.run_time = game_proc.run_time();
+            let game = game_map
+                .entry(game_exe_name.to_string())
+                .or_insert_with(|| {
+                    let friendly_name = match sysprovider
+                        .try_get_product_name(game_proc.exe().display().to_string())
+                    {
+                        Ok(name) => name,
+                        Err(_) => "".to_string(),
+                    };
 
-        let h = session.run_time / 60 / 60;
-        let m = session.run_time / 60 % 60;
+                    return Game::new(game_exe_name.to_string(), friendly_name);
+                });
 
-        match sender.send(format!("{}h {}m", h, m)) {
-            Ok(_) => {
-                println!("sent message {:?} for {}", Instant::now(), game_proc.name());
+            // if there's no session for this pid, create one, then update the session info
+            let last_session = game.sessions.last_mut();
+            if last_session.is_none() || last_session.unwrap().pid != game_pid {
+                game.sessions.push(Session {
+                    pid: game_pid,
+                    focus_spans: vec![FocusSpan(Some(Instant::now()), None)],
+                    run_time: 0,
+                });
+
+                // set last shown to now so that the overlay isn't displayed until the next notification window
                 last_shown = Some(Instant::now());
             }
-            Err(err) => println!("error on channel send: {:?}", err),
-        };
+
+            if last_shown.is_some()
+                && last_shown.unwrap().elapsed()
+                    < Duration::from_secs(cfg.watcher.notification_frequency)
+            {
+                continue;
+            }
+
+            let session = game.sessions.last_mut().unwrap();
+            session.run_time = game_proc.run_time();
+
+            let h = session.run_time / 60 / 60;
+            let m = session.run_time / 60 % 60;
+
+            match sender.send(format!("{}h {}m", h, m)) {
+                Ok(_) => {
+                    println!("sent message {:?} for {}", Instant::now(), game_proc.name());
+                    last_shown = Some(Instant::now());
+                }
+                Err(err) => println!("error on channel send: {:?}", err),
+            };
+        }
     }
 }
+
+#[cfg(test)]
+#[path = "./watcher_test.rs"]
+mod watcher_test;

@@ -23,14 +23,19 @@ pub struct WatcherConfig {
 }
 
 pub fn load() -> Result<Config, toml::de::Error> {
-    let mut dir = std::env::current_exe().unwrap();
-    dir.pop();
+    #[cfg(not(test))]
+    {
+        let mut dir = std::env::current_exe().unwrap();
+        dir.pop();
 
-    // TODO ignore patterns should support wildcards, not regexp
+        // TODO ignore patterns should support wildcards, not regexp
 
-    let p = format!("{}\\config.toml", dir.to_str().unwrap());
+        let p = format!("{}\\config.toml", dir.to_str().unwrap());
 
-    return toml::from_str(fs::read_to_string(p).unwrap().as_str());
+        return toml::from_str(fs::read_to_string(p).unwrap().as_str());
+    }
+    #[cfg(test)]
+    {
+        Ok(Config::default())
+    }
 }
-
-impl Config {}
