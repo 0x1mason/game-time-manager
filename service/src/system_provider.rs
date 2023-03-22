@@ -34,11 +34,8 @@ pub struct Win32Provider {}
 
 impl Win32Provider {
     pub fn new() -> Self {
-        INIT_COM.call_once(|| {
-            unsafe {
-                // TODO: handle error
-                CoInitialize(None);
-            }
+        INIT_COM.call_once(|| unsafe {
+            CoInitialize(None).expect("CoInitialize failed");
         });
 
         return Win32Provider {};
@@ -47,19 +44,17 @@ impl Win32Provider {
 
 impl SystemProvider for Win32Provider {
     fn try_get_game_pid(&self) -> Result<Pid, String> {
-        // https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ne-shellapi-query_user_notification_state
-        let state = unsafe {
-            match SHQueryUserNotificationState() {
+        unsafe {
+            // https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ne-shellapi-query_user_notification_state
+            let state = match SHQueryUserNotificationState() {
                 Ok(state) => state,
                 Err(_) => QUNS_NOT_PRESENT,
+            };
+
+            if state != QUNS_BUSY {
+                return Err(ERR_NO_GAME_FOUND.to_string());
             }
-        };
 
-        if state != QUNS_BUSY {
-            return Err(ERR_NO_GAME_FOUND.to_string());
-        }
-
-        unsafe {
             let lpdwprocessid: u32 = 0;
             let hwnd = GetForegroundWindow();
 
@@ -115,17 +110,6 @@ fn is_fullscreen(hwnd: HWND) -> bool {
     return rect == minfo.rcMonitor;
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn watch() {
-//         let mut mock = MockSystemProvider::new();
-//         // mock.expect
-//         assert_eq!(2 + 2, 4);
-//     }
-// }
 #[cfg(test)]
 #[path = "./system_provider_test.rs"]
 mod system_provider_test;
