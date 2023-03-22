@@ -1,10 +1,9 @@
 use crate::config;
 use crate::system_provider::SystemProvider;
 use regex::RegexSet;
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use std::{collections::HashMap, sync::mpsc::Sender};
 use sysinfo::{PidExt, ProcessExt, System, SystemExt};
 
 struct FocusSpan(/*start*/ Option<Instant>, /*end*/ Option<Instant>);

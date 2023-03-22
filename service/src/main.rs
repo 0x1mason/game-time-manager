@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
@@ -19,13 +19,8 @@ fn main() {
 
     nwg::init().expect("Failed to init Native Windows GUI");
 
-    let mut win: Overlay = Default::default();
-
-    let (close_sender, closer) = crossbeam::channel::bounded(1);
-    win.close_sender = Some(close_sender);
-    win.closer = Some(closer);
-
-    let _ui = overlay::Overlay::build_ui(win).expect("Failed to build UI");
+    let overlay = overlay::Overlay::new();
+    let _ui = overlay::Overlay::build_ui(overlay).expect("Failed to build UI");
     nwg::dispatch_thread_events();
 
     nwg::Font::remove_memory_font(mem_font);

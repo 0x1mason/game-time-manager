@@ -9,6 +9,7 @@ if (!
     Start-Process `
         -FilePath 'powershell' `
         -ArgumentList (
+        #flatten to single array
         '-File', $MyInvocation.MyCommand.Source, $args `
         | % { $_ }
     ) `
@@ -16,23 +17,21 @@ if (!
     exit
 }
 
-$WshShell = New-Object -comObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut("$Env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\GameTimeManager.lnk")
-$Shortcut.TargetPath = "$PSScriptRoot\GameTimeManager.exe"
-$Shortcut.Save()
+Remove-Item "$Env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\GameTimeManager.lnk"
 
-$streams = Get-Item -Force -Stream * "$PSScriptRoot\GameTimeManager.exe" | Select-Object Stream
-foreach ($s in $streams) {
-    if ($s.Stream -eq "Zone.Identifier") {
-        Remove-Item -Force -Stream Zone.Identifier "$PSScriptRoot\GameTimeManager.exe"
-        Write-Output "Removed zone identifier"
-        break
+# get process
+$proc = Get-Process GameTimeManager -ErrorAction SilentlyContinue
+if ($proc) {
+    Stop-Process -Name GameTimeManager
+
+    # should have loop with timeout full sleep
+    Start-Sleep 3
+    
+    if (!$proc.HasExited) {
+        Stop-Process -Force -Name GameTimeManager
     }
 }
 
-# use explorer.exe to start application with non-elevated permissions
-explorer.exe "$PSScriptRoot\GameTimeManager.exe"
-
-Write-Output "Successfully installed and started Game Time Manager."
+Write-Output "Successfully uninstalled Game Time Monitor."
 
 Pause

@@ -10,8 +10,8 @@ use windows::Win32::{
     UI::WindowsAndMessaging::GetForegroundWindow,
 };
 
-use winapi::um::wingdi::RGB;
-use winapi::um::winuser::{SetLayeredWindowAttributes, LWA_COLORKEY};
+use winapi::um::wingdi::{SetTextColor, RGB};
+use winapi::um::winuser::{GetDC, SetLayeredWindowAttributes, LWA_COLORKEY};
 
 use crate::{config, system_provider, watcher};
 
@@ -36,20 +36,32 @@ pub struct Overlay {
     notice: nwg::Notice,
 
     text: Arc<Mutex<String>>,
-    pub close_sender: Option<Sender<()>>,
-    pub closer: Option<Receiver<()>>,
+    close_sender: Option<Sender<()>>,
+    closer: Option<Receiver<()>>,
 }
 
 impl Overlay {
+    pub fn new() -> Self {
+        let mut s = Self {
+            ..Default::default()
+        };
+
+        let (close_sender, closer) = crossbeam::channel::bounded(1);
+        s.close_sender = Some(close_sender);
+        s.closer = Some(closer);
+
+        return s;
+    }
+
     fn on_init(&self) {
         let notice = self.notice.sender();
         let (sender, receiver) = crossbeam::channel::unbounded();
-        let closer = self.closer.clone();
+        let closer = self.closer.clone().unwrap();
 
         thread::spawn(|| {
             let sysprovider = &system_provider::Win32Provider::new();
-            let w = watcher::Watcher::new();
-            w.watch(sysprovider, sender, closer.unwrap());
+            let watcher = watcher::Watcher::new();
+            watcher.watch(sysprovider, sender, closer);
         });
 
         let display_text = self.text.clone();
@@ -106,6 +118,17 @@ impl Overlay {
         match self.text.lock().unwrap().as_str() {
             "" => {
                 self.window.set_visible(false);
+                // unsafe {
+                //     let hwnd = self.time_label.handle.hwnd().unwrap();
+                //     let hdc = GetDC(hwnd);
+                //     // // Color constants.
+                //     // const COLORREF rgbRed   =  0x000000FF;
+                //     // const COLORREF rgbGreen =  0x0000FF00;
+                //     // const COLORREF rgbBlue  =  0x00FF0000;
+                //     // const COLORREF rgbBlack =  0x00000000;
+                //     // const COLORREF rgbWhite =  0x00FFFFFF;
+                //     SetTextColor(hdc, 0x00FFFFFF);
+                // }
             }
             text => {
                 self.time_label.set_text(text);
