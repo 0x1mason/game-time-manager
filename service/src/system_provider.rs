@@ -1,5 +1,4 @@
 #[cfg(test)]
-use mockall::{automock, mock, predicate::*};
 use sysinfo::{Pid, PidExt};
 use windows::{
     core::{HSTRING, PCWSTR},

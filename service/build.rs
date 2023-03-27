@@ -15,6 +15,7 @@ fn main() {
         "src/install.ps1",
         "src/uninstall.ps1",
         "src/fonts",
+        "src/icons",
     ];
 
     for file in incl_files.iter() {

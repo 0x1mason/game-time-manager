@@ -1,0 +1,3 @@
+#define RT_MANIFEST 24
+1 RT_MANIFEST "game-time-manager-tray.manifest"
+app_icon ICON "src\\icons\\timer256.ico"
