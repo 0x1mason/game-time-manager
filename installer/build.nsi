@@ -105,7 +105,7 @@ SectionEnd
 
 Section "Uninstall"
     nsExec::Exec "taskkill /IM GameTimeManager.exe"
-    nsExec::Exec "taskkill /IM GameTimeManager-Tray.exe"
+    nsExec::Exec "taskkill /IM GameTimeManager-Tray.exe /f"
   ; Remove registry keys
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GameTimeManager"
   DeleteRegKey HKLM SOFTWARE\NSIS_GameTimeManager
