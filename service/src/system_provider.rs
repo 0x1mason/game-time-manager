@@ -1,4 +1,3 @@
-#[cfg(test)]
 use sysinfo::{Pid, PidExt};
 use windows::{
     core::{HSTRING, PCWSTR},
@@ -22,7 +21,6 @@ use windows::{
 const ERR_NO_GAME_FOUND: &str = "ErrNoGameFound";
 static INIT_COM: std::sync::Once = std::sync::Once::new();
 
-#[cfg_attr(test, automock)]
 pub trait SystemProvider {
     fn try_get_game_pid(&self) -> Result<Pid, String>;
     fn try_get_product_name(&self, exe_name: String) -> Result<String, String>;
