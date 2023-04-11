@@ -36,66 +36,20 @@ pub struct Overlay {
     notice: nwg::Notice,
 
     text: Arc<Mutex<String>>,
-    close_sender: Option<Sender<()>>,
-    closer: Option<Receiver<()>>,
 }
 
 impl Overlay {
-    pub fn new() -> Self {
+    pub fn new(text: String) -> Self {
         let mut s = Self {
             ..Default::default()
         };
 
-        let (close_sender, closer) = crossbeam::channel::bounded(1);
-        s.close_sender = Some(close_sender);
-        s.closer = Some(closer);
+        s.text = Arc::new(Mutex::new(text));
 
         return s;
     }
 
     fn on_init(&self) {
-        let notice = self.notice.sender();
-        let (sender, receiver) = crossbeam::channel::unbounded();
-        let closer = self.closer.clone().unwrap();
-
-        thread::spawn(|| {
-            let sysprovider = &system_provider::Win32Provider::new();
-            let watcher = watcher::Watcher::new();
-            watcher.watch(sysprovider, sender, closer);
-        });
-
-        let display_text = self.text.clone();
-
-        thread::spawn(move || {
-            for rcv in receiver {
-                let cfg = match config::load() {
-                    Ok(c) => c,
-                    Err(e) => {
-                        println!("{}", e);
-                        continue;
-                    }
-                };
-
-                for p in cfg.overlay.show_pattern.iter() {
-                    let delay: i32 = *p;
-
-                    if delay > 0 {
-                        *display_text.lock().unwrap() = rcv.clone();
-                    } else {
-                        *display_text.lock().unwrap() = String::from("");
-                    }
-
-                    notice.notice();
-
-                    let sleep = delay.abs() as u64;
-                    thread::sleep(Duration::from_secs(sleep));
-                }
-
-                *display_text.lock().unwrap() = String::from("");
-                notice.notice();
-            }
-        });
-
         match self.window.handle {
             nwg::ControlHandle::Hwnd(hwnd) => unsafe {
                 SetLayeredWindowAttributes(hwnd, RGB(255, 0, 0), 0, LWA_COLORKEY);
@@ -104,6 +58,40 @@ impl Overlay {
                 panic!("Bad handle type for window!")
             }
         }
+
+        let notice = self.notice.sender();
+
+        let display_text = self.text.clone();
+
+        thread::spawn(move || {
+            let cfg = match config::load() {
+                Ok(c) => c,
+                Err(e) => {
+                    println!("{}", e);
+                    return;
+                }
+            };
+
+            let text = display_text.lock().unwrap();
+
+            for p in cfg.overlay.show_pattern.iter() {
+                let delay: i32 = *p;
+
+                if delay > 0 {
+                    *display_text.lock().unwrap() = text.to_string();
+                } else {
+                    *display_text.lock().unwrap() = String::from("");
+                }
+
+                notice.notice();
+
+                thread::sleep(Duration::from_secs(delay.abs() as u64));
+            }
+
+            // TODO use proper signaling
+            *display_text.lock().unwrap() = String::from("@@close");
+            notice.notice();
+        });
     }
 
     fn on_notice(&self) {
@@ -116,6 +104,7 @@ impl Overlay {
         };
 
         match self.text.lock().unwrap().as_str() {
+            "@@close" => self.window.close(),
             "" => {
                 self.window.set_visible(false);
                 // unsafe {
@@ -146,10 +135,6 @@ impl Overlay {
     }
 
     fn close(&self) {
-        if self.close_sender.is_some() {
-            let cs = self.close_sender.clone();
-            cs.unwrap().send(()).expect("Close message should succeed");
-        }
         nwg::stop_thread_dispatch()
     }
 }

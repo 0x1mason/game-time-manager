@@ -61,8 +61,8 @@ fn main() {
         ),
         &PredefinedMenuItem::separator(),
         &settings,
-        &stop,
         &start,
+        &stop,
         &sm,
     ]);
 
