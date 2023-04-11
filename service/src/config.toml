@@ -6,16 +6,15 @@ y_offset = 10
 # The display pattern to use during a notification. Positive and negative integers can be used to create
 # a flashing pattern where positive indicates how many seconds to stay visible and negative indicates how
 # long to hide. Use a single positive value to display without flashing.
-show_pattern = [2]
+show_pattern = [1, -1, 1, -1, 8]
 
 [watcher]
 # How often to check system processes for likely games (seconds)
 poll_frequency = 5
 # How often to notify the overlay to show data (seconds)
-notification_frequency = 10
+notification_frequency = 300
 # Executable names to ignore; case-sensitive, supports regular expressions (wrap with 3 single quotes)
 ignore = [
     "explorer.exe",
     "TrainerRoad.exe",
-    '''^Zwiift.+''',
 ]

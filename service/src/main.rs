@@ -36,12 +36,21 @@ fn main() {
     thread::spawn(move || {
         for rcv in receiver {
             let overlay = overlay::Overlay::new(rcv);
-
             let _ui = overlay::Overlay::build_ui(overlay).expect("Failed to build UI");
             nwg::dispatch_thread_events();
         }
     });
 
+    wait_for_signal();
+
+    println!("exiting...");
+
+    close_sender.send(()).expect("failed to send close message");
+    watch_handle.join().expect("watch handle failed to join");
+    nwg::Font::remove_memory_font(mem_font);
+}
+
+fn wait_for_signal() {
     let term = Arc::new(AtomicBool::new(false));
     let sigs = [
         signal_hook::consts::SIGTERM,
@@ -56,10 +65,4 @@ fn main() {
     while !term.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(500));
     }
-
-    println!("exiting...");
-
-    close_sender.send(()).expect("failed to send close message");
-    watch_handle.join().expect("watch handle failed to join");
-    nwg::Font::remove_memory_font(mem_font);
 }

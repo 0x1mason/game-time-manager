@@ -30,8 +30,6 @@ fn main() {
     let dir = exe_path.to_str().unwrap().to_string();
 
     let config_path = format!("{}\\{}", dir, "config.toml");
-    let icon_path = format!("{}\\{}", dir, "icons\\timer256.png");
-    let icon = load_icon(std::path::Path::new(icon_path.as_str()));
 
     let gtm_is_running = get_gtm_proc_running();
 
@@ -65,6 +63,9 @@ fn main() {
         &stop,
         &sm,
     ]);
+
+    let icon_path = format!("{}\\{}", dir, "icons\\timer256.png");
+    let icon = load_icon(std::path::Path::new(icon_path.as_str()));
 
     let mut tray_icon = Some(
         TrayIconBuilder::new()
@@ -112,6 +113,7 @@ fn main() {
                         .arg(config_path.as_str())
                         .spawn();
                 }
+
                 id if id == stop.id() => {
                     let mut system = System::new_all();
                     for x in system.processes_by_exact_name("GameTimeManager.exe") {
@@ -120,40 +122,25 @@ fn main() {
                     start.set_enabled(true);
                     stop.set_enabled(false);
                 }
-                id if id == start.id() => {
-                    let mut gtm_path = env::current_exe().unwrap();
-                    gtm_path.pop();
-                    gtm_path.push("GameTimeManager.exe");
-                    let gtm_path_str = gtm_path
-                        .canonicalize()
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                        .replace(r"\\?\", "");
 
-                    Command::new(gtm_path_str).spawn();
+                id if id == start.id() => {
+                    let gtm_path = get_gtm_path();
+                    Command::new(gtm_path).spawn();
                     start.set_enabled(false);
                     stop.set_enabled(true);
                 }
-                id if id == enable_run.id() => {
-                    let mut gtm_path = env::current_exe().unwrap();
-                    gtm_path.pop();
-                    gtm_path.push("GameTimeManager.exe");
-                    let gtm_path_str = gtm_path
-                        .canonicalize()
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                        .replace(r"\\?\", "");
 
+                id if id == enable_run.id() => {
+                    let gtm_path = get_gtm_path();
                     hkcu_set_str_value(
                         r"Software\Microsoft\Windows\CurrentVersion\Run",
                         "GameTimeManager",
-                        gtm_path_str.as_str(),
+                        gtm_path.as_str(),
                     );
                     enable_run.set_enabled(false);
                     disable_run.set_enabled(true);
                 }
+
                 id if id == disable_run.id() => {
                     hkcu_delete_value(
                         r"Software\Microsoft\Windows\CurrentVersion\Run",
@@ -162,6 +149,7 @@ fn main() {
                     disable_run.set_enabled(false);
                     enable_run.set_enabled(true);
                 }
+
                 _ => (),
             }
         }
@@ -179,6 +167,18 @@ fn load_icon(path: &std::path::Path) -> tray_icon::icon::Icon {
     };
     tray_icon::icon::Icon::from_rgba(icon_rgba, icon_width, icon_height)
         .expect("Failed to open icon")
+}
+
+fn get_gtm_path() -> String {
+    let mut gtm_path = env::current_exe().unwrap();
+    gtm_path.pop();
+    gtm_path.push("GameTimeManager.exe");
+    gtm_path
+        .canonicalize()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .replace(r"\\?\", "")
 }
 
 fn get_gtm_proc_running() -> bool {
@@ -210,7 +210,7 @@ fn hkcu_delete_value(key_path: &str, value_name: &str) {
 fn hkcu_value_exists(key_path: &str, value_name: &str) -> bool {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     match hkcu.open_subkey(key_path) {
-        Ok(sk) => return sk.get_raw_value(value_name).is_ok(),
-        _ => return false,
-    };
+        Ok(sk) => sk.get_raw_value(value_name).is_ok(),
+        _ => false,
+    }
 }
