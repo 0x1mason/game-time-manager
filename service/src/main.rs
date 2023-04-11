@@ -57,6 +57,8 @@ fn main() {
         thread::sleep(Duration::from_millis(500));
     }
 
+    println!("exiting...");
+
     close_sender.send(()).expect("failed to send close message");
     watch_handle.join().expect("watch handle failed to join");
     nwg::Font::remove_memory_font(mem_font);

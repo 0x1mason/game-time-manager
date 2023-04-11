@@ -72,13 +72,13 @@ impl Overlay {
                 }
             };
 
-            let text = display_text.lock().unwrap();
+            let text = display_text.lock().unwrap().clone();
 
             for p in cfg.overlay.show_pattern.iter() {
                 let delay: i32 = *p;
 
                 if delay > 0 {
-                    *display_text.lock().unwrap() = text.to_string();
+                    *display_text.lock().unwrap() = text.clone();
                 } else {
                     *display_text.lock().unwrap() = String::from("");
                 }
@@ -87,7 +87,6 @@ impl Overlay {
 
                 thread::sleep(Duration::from_secs(delay.abs() as u64));
             }
-
             // TODO use proper signaling
             *display_text.lock().unwrap() = String::from("@@close");
             notice.notice();
@@ -135,6 +134,7 @@ impl Overlay {
     }
 
     fn close(&self) {
+        println!("closing window");
         nwg::stop_thread_dispatch()
     }
 }
